@@ -11,9 +11,9 @@
 #include <string.h> 
 #include <stdbool.h>
 
-void getInputFromUser(char **, char **);
+bool getInputFromUser(char **, char **);
 int * createPipe();
-void getCommands(char *, char **, char **);
+bool getCommands(char *, char **, char **);
 bool bufferIsValid(char *);
 void childProcess(int *, char **);
 void parentProcess(int, int *, char **);
@@ -25,13 +25,13 @@ int main()
     char *firstCommand[100];
     char *secondCommand[100];
 
-    getInputFromUser(firstCommand, secondCommand);
+    bool twoCommands = getInputFromUser(firstCommand, secondCommand);
     
     int *fileDescriptor = createPipe();
     int pid = fork();
     if ( pid == 0 )
         childProcess(fileDescriptor, firstCommand);
-    else if ( pid > 0 )
+    else if ( pid > 0 && twoCommands)
         parentProcess(pid, fileDescriptor, secondCommand);
     else
         perror(NULL);
@@ -39,11 +39,12 @@ int main()
     return 0;
 }
 
-void getInputFromUser(char **firstCommand, char **secondCommand)
+bool getInputFromUser(char **firstCommand, char **secondCommand)
 {
     printf("Enter command: ");
-    char *buffer = (char *)calloc(256, sizeof(char));
 
+    bool twoCommands;
+    char *buffer = (char *)calloc(256, sizeof(char));
     if ( bufferIsValid(buffer) )
     {
         printf("No command was entered. \n");
@@ -51,25 +52,28 @@ void getInputFromUser(char **firstCommand, char **secondCommand)
     }
     else 
     {
-        getCommands(buffer, firstCommand, secondCommand);
+        if ( strlen(buffer) > 0 )
+            buffer[strlen(buffer) - 1] = '\0';
+        twoCommands = getCommands(buffer, firstCommand, secondCommand);
     }
+
+    return twoCommands;
 }
 
 bool bufferIsValid(char *buffer)
 {
     fgets(buffer, 256, stdin);
-    buffer[strlen(buffer) - 1] = '\0';
     if ( buffer[0] == '\n' )
         return true;
     else 
         return false;
 }
 
-void getCommands(char *buffer, char **firstCommand, char **secondCommand)
+bool getCommands(char *buffer, char **firstCommand, char **secondCommand)
 {
     bool twoCommands = false;
-    int size = 0;
-    int tempSize = 0;
+    int firstSize = 0;
+    int secondSize = 0;
 
     char *token = strtok(buffer, " ");
     while( token != NULL )
@@ -77,14 +81,16 @@ void getCommands(char *buffer, char **firstCommand, char **secondCommand)
         if ( *token == '|' )
             twoCommands = true;
         else if ( !twoCommands )
-            firstCommand[size++] = token;      
+            firstCommand[firstSize++] = token;      
         else
-            secondCommand[tempSize++] = token;
+            secondCommand[secondSize++] = token;
 
         token = strtok(NULL, " ");
     }
-    firstCommand[size] = NULL;
-    secondCommand[tempSize] = NULL;
+    firstCommand[firstSize] = NULL;
+    secondCommand[secondSize] = NULL;
+
+    return twoCommands;
 }
 
 int * createPipe()
