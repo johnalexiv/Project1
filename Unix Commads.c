@@ -11,14 +11,14 @@
 #include <string.h> 
 #include <stdbool.h>
 
-void getInputFromUser(char **firstCommand, char **secondCommand);
+void getInputFromUser(char **, char **);
 int * createPipe();
-void getCommands(char *buffer, char **firstCommand, char **secondCommand);
-bool bufferIsValid(char *buffer);
-void childProcess(int *fileDescriptor, char **firstCommand);
-void parentProcess(int pid, int *fileDescriptor, char **secondCommand);
-void executeCommand(char **command);
-void waitForChild(int pid);
+void getCommands(char *, char **, char **);
+bool bufferIsValid(char *);
+void childProcess(int *, char **);
+void parentProcess(int, int *, char **);
+void executeCommand(char **);
+void waitForChild(int);
 
 int main()
 {    
