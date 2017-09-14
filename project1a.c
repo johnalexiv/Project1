@@ -15,8 +15,8 @@ bool getInputFromUser(char **, char **);
 int * createPipe();
 bool getCommands(char *, char **, char **);
 bool bufferIsValid(char *);
-void childProcess(int *, char **);
-void parentProcess(int, int *, char **);
+void childProcess(bool, int *, char **);
+void parentProcess(int, bool, int *, char **);
 void executeCommand(char **);
 void waitForChild(int);
 
@@ -30,10 +30,10 @@ int main()
     int *fileDescriptor = createPipe();
     int pid = fork();
     if ( pid == 0 )
-        childProcess(fileDescriptor, firstCommand);
-    else if ( pid > 0 && twoCommands)
-        parentProcess(pid, fileDescriptor, secondCommand);
-    else
+        childProcess(twoCommands, fileDescriptor, firstCommand);
+    else if ( pid > 0 )
+        parentProcess(pid, twoCommands, fileDescriptor, secondCommand);
+    else if ( pid < 0 )
         perror(NULL);
 
     return 0;
@@ -52,8 +52,6 @@ bool getInputFromUser(char **firstCommand, char **secondCommand)
     }
     else 
     {
-        if ( strlen(buffer) > 0 )
-            buffer[strlen(buffer) - 1] = '\0';
         twoCommands = getCommands(buffer, firstCommand, secondCommand);
     }
 
@@ -63,7 +61,8 @@ bool getInputFromUser(char **firstCommand, char **secondCommand)
 bool bufferIsValid(char *buffer)
 {
     fgets(buffer, 256, stdin);
-    if ( buffer[0] == '\n' )
+    buffer[strlen(buffer) - 1] = '\0';
+    if ( buffer[0] == '\0' )
         return true;
     else 
         return false;
@@ -104,22 +103,28 @@ int * createPipe()
     return fileDescriptor;
 }
 
-void childProcess(int *fileDescriptor, char **firstCommand)
+void childProcess(bool twoCommands, int *fileDescriptor, char **firstCommand)
 {
-    close(1);
-    dup(fileDescriptor[1]);
-    close(fileDescriptor[0]);
+    if ( twoCommands )
+    {
+        close(1);
+        dup(fileDescriptor[1]);
+        close(fileDescriptor[0]);
+    }
     executeCommand(firstCommand);
     exit(0);
 }
 
-void parentProcess(int pid, int *fileDescriptor, char **secondCommand)
+void parentProcess(int pid, bool twoCommands, int *fileDescriptor, char **secondCommand)
 {
     waitForChild(pid);
-    close(0);
-    dup(fileDescriptor[0]);
-    close(fileDescriptor[1]);
-    executeCommand(secondCommand);
+    if( twoCommands )
+    {
+        close(0);
+        dup(fileDescriptor[0]);
+        close(fileDescriptor[1]);
+        executeCommand(secondCommand);
+    }
 }
 
 void executeCommand(char **command)
